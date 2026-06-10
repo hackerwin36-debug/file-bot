@@ -1,0 +1,117 @@
+name: 🔥 OGGY FILE BOT - 24/7
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+    - cron: "10 */6 * * *"
+    - cron: "20 */6 * * *"
+    - cron: "30 */6 * * *"
+    - cron: "40 */6 * * *"
+    - cron: "50 */6 * * *"
+  workflow_dispatch:
+  push:
+
+jobs:
+  bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install pytelegrambotapi
+      - name: Run OGGY BOT
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          OWNER_ID: ${{ secrets.OWNER_ID }}
+        run: |
+          python -c "
+import telebot, threading, time, os, json
+
+TOKEN = os.environ['TOKEN']
+OWNER_ID = int(os.environ.get('OWNER_ID', 0))
+bot = telebot.TeleBot(TOKEN)
+
+SECRET = 'give_my_file'
+DATA_FILE = 'file_data.json'
+
+def load():
+    try:
+        with open(DATA_FILE, 'r') as f:
+            return json.load(f).get('file_id')
+    except:
+        return None
+
+def save(file_id):
+    with open(DATA_FILE, 'w') as f:
+        json.dump({'file_id': file_id}, f)
+
+FILE_ID = load()
+
+def delete_later(chat_id, msg_id, sec):
+    time.sleep(sec)
+    try: bot.delete_message(chat_id, msg_id)
+    except: pass
+
+@bot.message_handler(commands=['upload'])
+def upload_cmd(m):
+    if m.from_user.id != OWNER_ID:
+        bot.reply_to(m, '❌ Sirf owner!')
+        return
+    bot.reply_to(m, '📤 Ab file bhejo')
+
+@bot.message_handler(content_types=['document'])
+def handle_doc(m):
+    if m.from_user.id != OWNER_ID:
+        return
+    global FILE_ID
+    FILE_ID = m.document.file_id
+    save(FILE_ID)
+    bot.reply_to(m, f'✅ FILE SET!\n📄 {m.document.file_name}\n🔗 t.me/{(bot.get_me()).username}?start={SECRET}')
+
+@bot.message_handler(commands=['showfile'])
+def show_cmd(m):
+    if m.from_user.id != OWNER_ID:
+        return
+    if FILE_ID:
+        bot.send_document(m.chat.id, FILE_ID, caption='📁 Current file')
+    else:
+        bot.reply_to(m, '❌ No file')
+
+@bot.message_handler(commands=['removefile'])
+def remove_cmd(m):
+    if m.from_user.id != OWNER_ID:
+        return
+    global FILE_ID
+    FILE_ID = None
+    save(None)
+    bot.reply_to(m, '🗑️ File removed')
+
+@bot.message_handler(commands=['status'])
+def status_cmd(m):
+    if m.from_user.id != OWNER_ID:
+        return
+    bot.reply_to(m, f'📊 Status\n📁 File: {\"✅\" if FILE_ID else \"❌\"}\n👑 Owner: {OWNER_ID}')
+
+@bot.message_handler(commands=['start'])
+def start_cmd(m):
+    if not FILE_ID:
+        bot.reply_to(m, '❌ No file set')
+        return
+    p = m.text.split()
+    if len(p) > 1 and p[1] == SECRET:
+        bot.send_message(m.chat.id, '⚠️ 1 GHANTA ME DELETE! Download kar le!')
+        f = bot.send_document(m.chat.id, FILE_ID, caption='🔓 Ye le teri file!')
+        threading.Thread(target=delete_later, args=(m.chat.id, f.message_id, 3600)).start()
+    elif len(p) > 1:
+        bot.reply_to(m, '❌ GALAT LINK')
+    else:
+        bot.reply_to(m, '🤡 Channel ke link pe click kar!')
+
+@bot.message_handler(commands=['ping'])
+def ping(m):
+    bot.reply_to(m, '🏓 OGGY ALIVE!')
+
+print('🔥 OGGY BOT ACTIVE!')
+bot.infinity_polling()
+"
