@@ -8,7 +8,7 @@ TOKEN = os.environ['TOKEN']
 MASTER = int(os.environ['OWNER'])
 bot = telebot.TeleBot(TOKEN)
 
-SECRET = 'give_my_file'  # 🔥 YAHI EXACT LINK ME HONA CHAHIYE
+SECRET = 'give_my_file'
 FILE_DATA = 'file.json'
 OWNER_DATA = 'owners.json'
 
@@ -26,7 +26,8 @@ def save_owners(owners):
 def load_file():
     try:
         with open(FILE_DATA, 'r') as f:
-            return json.load(f).get('file_id')
+            data = json.load(f)
+            return data.get('file_id')
     except:
         return None
 
@@ -40,18 +41,18 @@ FILE_ID = load_file()
 def is_owner(uid):
     return uid in OWNERS
 
-def delete_later(cid, mid, sec):
-    time.sleep(sec)
+def delete_later(chat_id, message_id, delay):
+    time.sleep(delay)
     try:
-        bot.delete_message(cid, mid)
-    except:
-        pass
+        bot.delete_message(chat_id, message_id)
+    except Exception as e:
+        print(f"Delete error: {e}")
 
 # ========== OWNER COMMANDS ==========
 
 @bot.message_handler(commands=['myid'])
 def myid(m):
-    bot.reply_to(m, f'🆔 **Your ID:** `{m.from_user.id}`\n\n👑 Share this with master owner to become owner!', parse_mode='Markdown')
+    bot.reply_to(m, f'🆔 **Your ID:** `{m.from_user.id}`', parse_mode='Markdown')
 
 @bot.message_handler(commands=['addowner'])
 def addowner(m):
@@ -61,17 +62,17 @@ def addowner(m):
     try:
         parts = m.text.split()
         if len(parts) < 2:
-            bot.reply_to(m, '📝 **Usage:** `/addowner ID`\n\nExample: `/addowner 123456789`', parse_mode='Markdown')
+            bot.reply_to(m, '📝 Usage: `/addowner ID`', parse_mode='Markdown')
             return
         new = int(parts[1])
         if new not in OWNERS:
             OWNERS.append(new)
             save_owners(OWNERS)
-            bot.reply_to(m, f'✅ **Owner Added!**\n\n👑 New Owner: `{new}`\n📋 Total Owners: `{len(OWNERS)}`', parse_mode='Markdown')
+            bot.reply_to(m, f'✅ Owner `{new}` added! Total: {len(OWNERS)}', parse_mode='Markdown')
         else:
             bot.reply_to(m, f'⚠️ `{new}` is already an owner!', parse_mode='Markdown')
     except:
-        bot.reply_to(m, '❌ Invalid ID! Use numbers only.', parse_mode='Markdown')
+        bot.reply_to(m, '❌ Invalid ID!', parse_mode='Markdown')
 
 @bot.message_handler(commands=['removeowner'])
 def removeowner(m):
@@ -81,50 +82,49 @@ def removeowner(m):
     try:
         parts = m.text.split()
         if len(parts) < 2:
-            bot.reply_to(m, '📝 **Usage:** `/removeowner ID`\n\nExample: `/removeowner 123456789`', parse_mode='Markdown')
+            bot.reply_to(m, '📝 Usage: `/removeowner ID`', parse_mode='Markdown')
             return
         rem = int(parts[1])
         if rem == MASTER:
-            bot.reply_to(m, '🔥 Cannot remove MASTER owner!', parse_mode='Markdown')
+            bot.reply_to(m, '❌ Cannot remove MASTER owner!', parse_mode='Markdown')
         elif rem in OWNERS:
             OWNERS.remove(rem)
             save_owners(OWNERS)
-            bot.reply_to(m, f'🗑️ **Owner Removed!**\n\n👑 Removed: `{rem}`\n📋 Total Owners: `{len(OWNERS)}`', parse_mode='Markdown')
+            bot.reply_to(m, f'🗑️ Owner `{rem}` removed! Total: {len(OWNERS)}', parse_mode='Markdown')
         else:
             bot.reply_to(m, f'⚠️ `{rem}` is not an owner!', parse_mode='Markdown')
     except:
-        bot.reply_to(m, '❌ Invalid ID! Use numbers only.', parse_mode='Markdown')
+        bot.reply_to(m, '❌ Invalid ID!', parse_mode='Markdown')
 
 @bot.message_handler(commands=['owners'])
 def listowners(m):
     if not is_owner(m.from_user.id):
         bot.reply_to(m, '🔒 Only owners can view this!', parse_mode='Markdown')
         return
-    txt = '👑 **OWNERS LIST** 👑\n\n'
+    txt = '👑 OWNERS LIST 👑\n\n'
     for o in OWNERS:
         if o == MASTER:
             txt += f'⭐ `{o}` (MASTER)\n'
         else:
             txt += f'✅ `{o}`\n'
-    txt += f'\n📋 **Total:** `{len(OWNERS)}`'
+    txt += f'\n📋 Total: {len(OWNERS)}'
     bot.reply_to(m, txt, parse_mode='Markdown')
 
 @bot.message_handler(commands=['upload'])
 def upload(m):
     if not is_owner(m.from_user.id):
-        bot.reply_to(m, '🔒 Only owners can upload files!', parse_mode='Markdown')
+        bot.reply_to(m, '🔒 Only owners can upload!', parse_mode='Markdown')
         return
-    bot.reply_to(m, '📤 **Send me the file**\n\nSupported: Document, Photo, Video, Audio\n\n⏰ File will auto-delete in 1 hour for users!', parse_mode='Markdown')
+    bot.reply_to(m, '📤 Send me the file (Document/Photo/Video/Audio)', parse_mode='Markdown')
 
 @bot.message_handler(content_types=['document', 'photo', 'video', 'audio'])
 def handle_file(m):
     if not is_owner(m.from_user.id):
-        bot.reply_to(m, '🔒 Only owners can upload files!', parse_mode='Markdown')
+        bot.reply_to(m, '🔒 Only owners can upload!', parse_mode='Markdown')
         return
     
     global FILE_ID
     file_name = "Unknown"
-    file_type = "File"
     
     if m.document:
         FILE_ID = m.document.file_id
@@ -142,31 +142,37 @@ def handle_file(m):
         FILE_ID = m.audio.file_id
         file_name = m.audio.file_name or "Audio.mp3"
         file_type = "🎵 Audio"
+    else:
+        bot.reply_to(m, '❌ Unsupported file type!', parse_mode='Markdown')
+        return
     
     save_file(FILE_ID)
     botname = bot.get_me().username
     
     bot.reply_to(
         m,
-        f'✅ **FILE SET!**\n\n'
-        f'{file_type} `{file_name}`\n'
-        f'🆔 ID: `{FILE_ID[:20]}...`\n\n'
-        f'🔗 **DOWNLOAD LINK:**\n'
+        f'✅ **FILE SET SUCCESSFULLY!**\n\n'
+        f'{file_type} `{file_name}`\n\n'
+        f'🔗 **Download Link:**\n'
         f'`https://t.me/{botname}?start={SECRET}`\n\n'
-        f'⏰ Users will get file with **1 hour auto-delete**!\n'
-        f'👑 You can change file anytime with `/upload`',
+        f'⏰ File auto-delete: 1 HOUR\n'
+        f'📢 Users must join channel first!',
         parse_mode='Markdown'
     )
+    
+    print(f"✅ File set: {file_name} - ID: {FILE_ID[:30]}...")
 
 @bot.message_handler(commands=['showfile'])
 def showfile(m):
     if not is_owner(m.from_user.id):
         return
     if FILE_ID:
-        bot.send_document(m.chat.id, FILE_ID, caption='📁 **Current File in Bot**\n\n✅ This is what users will get!', parse_mode='Markdown')
-        bot.reply_to(m, f'✅ File ID: `{FILE_ID[:30]}...`', parse_mode='Markdown')
+        try:
+            bot.send_document(m.chat.id, FILE_ID, caption='📁 Current file in bot')
+        except Exception as e:
+            bot.reply_to(m, f'❌ Error: {e}\n\nFile ID may be expired. Please re-upload.', parse_mode='Markdown')
     else:
-        bot.reply_to(m, '❌ **No file set!**\n\nUse `/upload` to set a file.', parse_mode='Markdown')
+        bot.reply_to(m, '❌ No file set! Use /upload', parse_mode='Markdown')
 
 @bot.message_handler(commands=['removefile'])
 def removefile(m):
@@ -175,117 +181,93 @@ def removefile(m):
     global FILE_ID
     FILE_ID = None
     save_file(None)
-    bot.reply_to(m, '🗑️ **File Removed!**\n\nUsers will now see "No file available" message.', parse_mode='Markdown')
+    bot.reply_to(m, '🗑️ File removed!', parse_mode='Markdown')
 
 @bot.message_handler(commands=['status'])
 def status(m):
     if not is_owner(m.from_user.id):
         return
     status_text = '✅ SET' if FILE_ID else '❌ NOT SET'
-    emoji = '🟢' if FILE_ID else '🔴'
     bot.reply_to(
         m,
-        f'{emoji} **BOT STATUS** {emoji}\n\n'
-        f'📁 File: `{status_text}`\n'
-        f'👑 Owners: `{len(OWNERS)}`\n'
-        f'⭐ Master: `{MASTER}`\n'
-        f'⏰ Auto-delete: `1 Hour`\n'
-        f'🔄 24/7: `Active`\n'
-        f'🎯 Mode: `User gets file via link only`\n\n'
-        f'🔗 **Current Link:** `https://t.me/{bot.get_me().username}?start={SECRET}`',
+        f'📊 **BOT STATUS**\n\n'
+        f'📁 File: {status_text}\n'
+        f'👑 Owners: {len(OWNERS)}\n'
+        f'⭐ Master: {MASTER}\n'
+        f'⏰ Auto-delete: 1 Hour\n'
+        f'🔗 Link: `https://t.me/{bot.get_me().username}?start={SECRET}`',
         parse_mode='Markdown'
     )
+
+@bot.message_handler(commands=['ping'])
+def ping(m):
+    bot.reply_to(m, '🏓 Pong! Bot is alive', parse_mode='Markdown')
 
 # ========== USER COMMANDS ==========
 
 @bot.message_handler(commands=['start'])
 def start(m):
-    print(f"DEBUG: User {m.from_user.id} sent: {m.text}")  # Debug line
+    print(f"DEBUG: User {m.from_user.id} - {m.text}")
     
     if not FILE_ID:
-        bot.reply_to(
-            m,
-            '❌ **No File Available!**\n\n'
-            '📢 Bot is being setup. Contact owner.\n'
-            '👑 Owner will upload file soon.',
-            parse_mode='Markdown'
-        )
+        bot.reply_to(m, '❌ No file available! Contact owner.', parse_mode='Markdown')
         return
     
     parts = m.text.split()
-    print(f"DEBUG: Parts = {parts}")  # Debug line
-    print(f"DEBUG: SECRET = {SECRET}")  # Debug line
     
+    # Check if user came from correct link
     if len(parts) > 1 and parts[1] == SECRET:
-        # Send warning
-        bot.send_message(
-            m.chat.id,
-            '⚠️ **WARNING!** ⚠️\n\n'
-            '📁 Ye file **1 GHANTA** baad **AUTO-DELETE** ho jayegi!\n\n'
-            '💾 **Abhi download kar lo!**\n'
-            '📥 Save karke rakh le!\n\n'
-            '⏰ Time remaining: `60 minutes`\n'
-            '🔥 RAI CONFIG ☠️',
-            parse_mode='Markdown'
-        )
-        
-        # Send file
-        f = bot.send_document(
-            m.chat.id,
-            FILE_ID,
-            caption='🔓 **Ye le teri file!**\n\n'
-            '⏰ **1 ghanta** hai tere paas!\n'
-            '💀 Delete hone se pehle download kar le!\n\n'
-            '😈 **RAI CONFIG** ☠️',
-            parse_mode='Markdown'
-        )
-        
-        # Start deletion timer
-        threading.Thread(target=delete_later, args=(m.chat.id, f.message_id, 3600)).start()
-        
+        # User clicked correct link - send file
+        try:
+            # Send warning
+            bot.send_message(
+                m.chat.id,
+                '⚠️ **WARNING!** ⚠️\n\n'
+                '📁 Ye file **1 GHANTA** baad **AUTO-DELETE** ho jayegi!\n\n'
+                '💾 **Abhi download kar lo!**\n'
+                '📥 Save karke rakh le!\n\n'
+                '🔥 RAI CONFIG ☠️',
+                parse_mode='Markdown'
+            )
+            
+            # Send file
+            file_msg = bot.send_document(
+                m.chat.id,
+                FILE_ID,
+                caption='🔓 **Ye le teri file!**\n\n⏰ 1 ghanta hai tere paas!\n\n😈 RAI CONFIG ☠️',
+                parse_mode='Markdown'
+            )
+            
+            # Auto delete after 1 hour
+            threading.Thread(target=delete_later, args=(m.chat.id, file_msg.message_id, 3600)).start()
+            
+            print(f"✅ File sent to user {m.from_user.id}")
+            
+        except Exception as e:
+            bot.reply_to(m, f'❌ Error sending file: {e}\n\nContact owner.', parse_mode='Markdown')
+            print(f"❌ Error: {e}")
+    
     elif len(parts) > 1:
         bot.reply_to(
             m,
             f'❌ **GALAT LINK!** ❌\n\n'
-            f'🔗 Tumne bheja: `{parts[1]}`\n'
-            f'✅ Sahi secret: `{SECRET}`\n\n'
-            f'🔗 Channel se **sahi link** click kar.\n'
-            f'📢 Direct /start se file nahi milegi!',
+            f'🔗 Sahi link format: `https://t.me/{bot.get_me().username}?start={SECRET}`',
             parse_mode='Markdown'
         )
     else:
         bot.reply_to(
             m,
-            '🤡 **CHUTIYA BANA RHA HAI KYA?** 🤡\n\n'
-            f'🔗 **Channel me diye LINK** pe CLICK kar!\n\n'
-            f'✅ Sahi link format: `https://t.me/{bot.get_me().username}?start={SECRET}`\n\n'
-            '❌ `/start` type karne se kuch nahi hoga.\n'
-            '✅ Sirf channel link se file milegi!\n\n'
-            '🔥 **RAI CONFIG** ☠️',
+            f'🤡 **CHANNEL LINK SE CLICK KAR!** 🤡\n\n'
+            f'🔗 Link: `https://t.me/{bot.get_me().username}?start={SECRET}`\n\n'
+            f'❌ Direct `/start` se file nahi milegi!',
             parse_mode='Markdown'
         )
-
-@bot.message_handler(commands=['ping'])
-def ping(m):
-    status_text = '✅ SET' if FILE_ID else '❌ NOT SET'
-    bot.reply_to(
-        m,
-        f'🏓 **PONG!** 🏓\n\n'
-        f'✅ Bot is **ALIVE** and **RUNNING**!\n'
-        f'🔥 RAI CONFIG mode: **ACTIVE**\n'
-        f'⏰ 24/7: **ON**\n'
-        f'📁 File status: `{status_text}`\n'
-        f'🔗 Link: `https://t.me/{bot.get_me().username}?start={SECRET}`\n\n'
-        f'😈 RAI CONFIG ☠️',
-        parse_mode='Markdown'
-    )
 
 print('='*50)
 print('🔥 RAI CONFIG BOT ACTIVATED!')
 print(f'👑 Master Owner: {MASTER}')
-print(f'📋 Total Owners: {len(OWNERS)}')
-print(f'📁 File Status: {"SET" if FILE_ID else "NOT SET"}')
-print(f'🔗 Secret Code: {SECRET}')
-print(f'🤖 Bot Username: @{(bot.get_me()).username}')
+print(f'📁 File: {"SET" if FILE_ID else "NOT SET"}')
+print(f'🔗 Secret: {SECRET}')
+print(f'🤖 Bot: @{(bot.get_me()).username}')
 print('='*50)
 bot.infinity_polling()
