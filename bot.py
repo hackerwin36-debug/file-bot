@@ -18,6 +18,7 @@ BOT_NAME = '𝗥𝗔𝗜 𝗖𝗢𝗡𝗙𝗜𝗚 ☠️'
 
 FILE_DATA = 'file.json'
 OWNER_DATA = 'owners.json'
+USERS_DATA = 'users.json'  # Store all users who interacted
 
 BANNER = """
 ╔══════════════════════════════════════════╗
@@ -27,6 +28,7 @@ BANNER = """
 ║          🎯 1 HOUR AUTO DELETE          ║
 ║          👑 MULTI OWNER SUPPORT         ║
 ║          📢 CHANNEL VERIFICATION        ║
+║          📣 BROADCAST NOTICE            ║
 ╚══════════════════════════════════════════╝
 """
 
@@ -52,6 +54,20 @@ def save_file(fid):
     with open(FILE_DATA, 'w') as f:
         json.dump({'file_id': fid}, f)
 
+def load_users():
+    try:
+        with open(USERS_DATA, 'r') as f:
+            return json.load(f).get('users', [])
+    except:
+        return []
+
+def save_user(user_id):
+    users = load_users()
+    if user_id not in users:
+        users.append(user_id)
+        with open(USERS_DATA, 'w') as f:
+            json.dump({'users': users}, f)
+
 OWNERS = load_owners()
 FILE_ID = load_file()
 
@@ -75,6 +91,105 @@ def delete_later(cid, mid, sec):
 def get_time():
     return datetime.now().strftime("%I:%M %p")
 
+# ========== 📢 BROADCAST FUNCTION ==========
+
+@bot.message_handler(commands=['broadcast'])
+def broadcast_cmd(m):
+    if not is_owner(m.from_user.id):
+        msg = f"""
+❌ **ACCESS DENIED**
+
+╭━━━━━━━━━━━━━━━━━━━━━╮
+┃  🔒 Only owners can broadcast!
+╰━━━━━━━━━━━━━━━━━━━━━╯
+"""
+        bot.reply_to(m, msg, parse_mode='Markdown')
+        return
+    
+    msg = f"""
+📢 **BROADCAST NOTICE**
+
+╭━━━━━━━━━━━━━━━━━━━━━╮
+┃  📝 Send me the message you want to broadcast
+┃  ━━━━━━━━━━━━━━━━━
+┃  ✅ Supported: Text, Photo, Video, Document
+┃  📊 Will be sent to ALL users who used bot
+┃  ━━━━━━━━━━━━━━━━━
+┃  💡 Reply to this message with your broadcast
+╰━━━━━━━━━━━━━━━━━━━━━╯
+✨ {BOT_NAME} PREMIUM
+"""
+    bot.reply_to(m, msg, parse_mode='Markdown')
+    # Store waiting for broadcast
+    global waiting_broadcast
+    waiting_broadcast = True
+
+@bot.message_handler(func=lambda m: hasattr(bot, 'waiting_broadcast') and bot.waiting_broadcast and is_owner(m.from_user.id))
+def handle_broadcast(m):
+    bot.waiting_broadcast = False
+    
+    users = load_users()
+    if not users:
+        bot.reply_to(m, '❌ No users found! No one has used the bot yet.', parse_mode='Markdown')
+        return
+    
+    sent = 0
+    failed = 0
+    
+    status_msg = bot.reply_to(m, f'📢 Broadcasting to {len(users)} users... ⏳', parse_mode='Markdown')
+    
+    for user_id in users:
+        try:
+            if m.text:
+                bot.send_message(user_id, f"""
+📣 **{BOT_NAME} NOTICE** 📣
+
+╭━━━━━━━━━━━━━━━━━━━━━╮
+┃  {m.text}
+╰━━━━━━━━━━━━━━━━━━━━━╯
+
+✨ {BOT_NAME} PREMIUM
+🕒 {get_time()}
+""", parse_mode='Markdown')
+            elif m.photo:
+                bot.send_photo(user_id, m.photo[-1].file_id, caption=f"""
+📣 **{BOT_NAME} NOTICE** 📣
+
+╭━━━━━━━━━━━━━━━━━━━━━╮
+┃  Broadcast from owner
+╰━━━━━━━━━━━━━━━━━━━━━╯
+✨ {BOT_NAME}
+""")
+            elif m.document:
+                bot.send_document(user_id, m.document.file_id, caption=f"""
+📣 **{BOT_NAME} NOTICE** 📣
+
+Broadcast from owner
+""")
+            sent += 1
+        except:
+            failed += 1
+        time.sleep(0.05)  # Avoid flood wait
+    
+    bot.edit_message_text(
+        f"""
+✅ **BROADCAST COMPLETED!**
+
+╭━━━━━━━━━━━━━━━━━━━━━╮
+┃  📊 **STATISTICS**
+┃  ━━━━━━━━━━━━━━━━━
+┃  ✅ Sent: `{sent}`
+┃  ❌ Failed: `{failed}`
+┃  📋 Total: `{len(users)}`
+╰━━━━━━━━━━━━━━━━━━━━━╯
+✨ {BOT_NAME} PREMIUM
+🕒 `{get_time()}`
+""",
+        status_msg.message_id,
+        status_msg.chat.id,
+        parse_mode='Markdown'
+    )
+
 # ========== 📚 HELP COMMAND ==========
 
 @bot.message_handler(commands=['help'])
@@ -93,6 +208,7 @@ def help_command(m):
 ┃  🔹 `/showfile` - View current file
 ┃  🔹 `/removefile` - Delete file from bot
 ┃  🔹 `/status` - Check bot status
+┃  🔹 `/broadcast` - Send notice to ALL users
 ┃  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ┃  👥 **OWNER MANAGEMENT**
 ┃  🔹 `/addowner ID` - Add new owner
@@ -106,11 +222,10 @@ def help_command(m):
 ┃  🔹 `/start` - Welcome message
 ╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
 
-📌 **FILE SETUP GUIDE:**
-1. Use `/upload` command
-2. Send your file (document/photo/video/audio)
-3. File automatically sets in bot
-4. Share channel link with users
+📌 **BROADCAST GUIDE:**
+1. Use `/broadcast` command
+2. Send your message (text/photo/video)
+3. Bot sends to ALL users automatically
 
 ✨ {BOT_NAME} PREMIUM
 🕒 `{get_time()}`
@@ -153,6 +268,9 @@ def help_command(m):
 
 @bot.message_handler(commands=['start'])
 def start_cmd(m):
+    # Save user to database
+    save_user(m.from_user.id)
+    
     if not FILE_ID:
         msg = f"""
 ✨ **WELCOME TO {BOT_NAME}** ✨
@@ -479,6 +597,7 @@ def removefile(m):
 def status(m):
     if not is_owner(m.from_user.id):
         return
+    users_count = len(load_users())
     status_emoji = '🟢' if FILE_ID else '🔴'
     status_text = 'ONLINE' if FILE_ID else 'STANDBY'
     msg = f"""
@@ -492,6 +611,7 @@ def status(m):
 ┃  ⏰ **AUTO-DELETE:** `1 HOUR`
 ┃  🔄 **UPTIME:** `24/7`
 ┃  🎯 **MODE:** `PREMIUM`
+┃  📊 **USERS:** `{users_count}`
 ╰━━━━━━━━━━━━━━━━━━━━━╯
 ✨ {BOT_NAME} PREMIUM
 🕒 `{get_time()}`
@@ -502,6 +622,9 @@ def status(m):
 
 @bot.message_handler(commands=['start'])
 def user_start(m):
+    # Save user
+    save_user(m.from_user.id)
+    
     if not FILE_ID:
         msg = f"""
 ✨ **{BOT_NAME}** ✨
@@ -611,5 +734,6 @@ print(f"🔥 {BOT_NAME} ACTIVATED!")
 print(f"👑 Master Owner: {MASTER}")
 print(f"📢 Channel: {CHANNEL_USERNAME}")
 print(f"📁 File Status: {'SET' if FILE_ID else 'NOT SET'}")
+print(f"📊 Users Tracked: {len(load_users())}")
 print("="*50)
 bot.infinity_polling()
