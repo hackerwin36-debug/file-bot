@@ -8,7 +8,7 @@ TOKEN = os.environ['TOKEN']
 MASTER = int(os.environ['OWNER'])
 bot = telebot.TeleBot(TOKEN)
 
-SECRET = 'give_my_file'
+SECRET = 'give_my_file'  # 🔥 YAHI EXACT LINK ME HONA CHAHIYE
 FILE_DATA = 'file.json'
 OWNER_DATA = 'owners.json'
 
@@ -151,8 +151,8 @@ def handle_file(m):
         f'✅ **FILE SET!**\n\n'
         f'{file_type} `{file_name}`\n'
         f'🆔 ID: `{FILE_ID[:20]}...`\n\n'
-        f'🔗 **Channel Link:**\n'
-        f'https://t.me/{botname}?start={SECRET}\n\n'
+        f'🔗 **DOWNLOAD LINK:**\n'
+        f'`https://t.me/{botname}?start={SECRET}`\n\n'
         f'⏰ Users will get file with **1 hour auto-delete**!\n'
         f'👑 You can change file anytime with `/upload`',
         parse_mode='Markdown'
@@ -191,7 +191,8 @@ def status(m):
         f'⭐ Master: `{MASTER}`\n'
         f'⏰ Auto-delete: `1 Hour`\n'
         f'🔄 24/7: `Active`\n'
-        f'🎯 Mode: `User gets file via link only`',
+        f'🎯 Mode: `User gets file via link only`\n\n'
+        f'🔗 **Current Link:** `https://t.me/{bot.get_me().username}?start={SECRET}`',
         parse_mode='Markdown'
     )
 
@@ -199,27 +200,32 @@ def status(m):
 
 @bot.message_handler(commands=['start'])
 def start(m):
+    print(f"DEBUG: User {m.from_user.id} sent: {m.text}")  # Debug line
+    
     if not FILE_ID:
         bot.reply_to(
             m,
             '❌ **No File Available!**\n\n'
-            '📢 Bot is being setup. Contact owner for more info.\n'
+            '📢 Bot is being setup. Contact owner.\n'
             '👑 Owner will upload file soon.',
             parse_mode='Markdown'
         )
         return
     
     parts = m.text.split()
+    print(f"DEBUG: Parts = {parts}")  # Debug line
+    print(f"DEBUG: SECRET = {SECRET}")  # Debug line
+    
     if len(parts) > 1 and parts[1] == SECRET:
-        # Send warning with emojis
+        # Send warning
         bot.send_message(
             m.chat.id,
-            '⚠️ **⚠️ WARNING! ⚠️** ⚠️\n\n'
+            '⚠️ **WARNING!** ⚠️\n\n'
             '📁 Ye file **1 GHANTA** baad **AUTO-DELETE** ho jayegi!\n\n'
             '💾 **Abhi download kar lo!**\n'
-            '📥 Save karke rakh le, warna baad me nahi milegi!\n\n'
+            '📥 Save karke rakh le!\n\n'
             '⏰ Time remaining: `60 minutes`\n'
-            '🔥 OGGY BHAI - CHUMT KA DARINDA',
+            '🔥 RAI CONFIG ☠️',
             parse_mode='Markdown'
         )
         
@@ -230,7 +236,7 @@ def start(m):
             caption='🔓 **Ye le teri file!**\n\n'
             '⏰ **1 ghanta** hai tere paas!\n'
             '💀 Delete hone se pehle download kar le!\n\n'
-            '😈 **OGGY BHAI** - CHUMT KA DARINDA',
+            '😈 **RAI CONFIG** ☠️',
             parse_mode='Markdown'
         )
         
@@ -240,20 +246,22 @@ def start(m):
     elif len(parts) > 1:
         bot.reply_to(
             m,
-            '❌ **GALAT LINK!** ❌\n\n'
-            '🔗 Channel se **sahi link** click kar.\n'
-            '📢 Direct /start se file nahi milegi!\n\n'
-            '👑 Owner se contact karo agar problem hai.',
+            f'❌ **GALAT LINK!** ❌\n\n'
+            f'🔗 Tumne bheja: `{parts[1]}`\n'
+            f'✅ Sahi secret: `{SECRET}`\n\n'
+            f'🔗 Channel se **sahi link** click kar.\n'
+            f'📢 Direct /start se file nahi milegi!',
             parse_mode='Markdown'
         )
     else:
         bot.reply_to(
             m,
             '🤡 **CHUTIYA BANA RHA HAI KYA?** 🤡\n\n'
-            '🔗 **Channel me diye LINK** pe CLICK kar, warna file nahi milegi!\n\n'
+            f'🔗 **Channel me diye LINK** pe CLICK kar!\n\n'
+            f'✅ Sahi link format: `https://t.me/{bot.get_me().username}?start={SECRET}`\n\n'
             '❌ `/start` type karne se kuch nahi hoga.\n'
             '✅ Sirf channel link se file milegi!\n\n'
-            '🔥 **OGGY BHAI** - CHUMT KA DARINDA 😈',
+            '🔥 **RAI CONFIG** ☠️',
             parse_mode='Markdown'
         )
 
@@ -264,17 +272,20 @@ def ping(m):
         m,
         f'🏓 **PONG!** 🏓\n\n'
         f'✅ Bot is **ALIVE** and **RUNNING**!\n'
-        f'🔥 OGGY BHAI mode: **ACTIVE**\n'
+        f'🔥 RAI CONFIG mode: **ACTIVE**\n'
         f'⏰ 24/7: **ON**\n'
-        f'📁 File status: `{status_text}`\n\n'
-        f'😈 CHUMT KA DARINDA is here!',
+        f'📁 File status: `{status_text}`\n'
+        f'🔗 Link: `https://t.me/{bot.get_me().username}?start={SECRET}`\n\n'
+        f'😈 RAI CONFIG ☠️',
         parse_mode='Markdown'
     )
 
 print('='*50)
-print('🔥 OGGY BOT ACTIVATED! (EMOJI VERSION)')
+print('🔥 RAI CONFIG BOT ACTIVATED!')
 print(f'👑 Master Owner: {MASTER}')
 print(f'📋 Total Owners: {len(OWNERS)}')
 print(f'📁 File Status: {"SET" if FILE_ID else "NOT SET"}')
+print(f'🔗 Secret Code: {SECRET}')
+print(f'🤖 Bot Username: @{(bot.get_me()).username}')
 print('='*50)
 bot.infinity_polling()
