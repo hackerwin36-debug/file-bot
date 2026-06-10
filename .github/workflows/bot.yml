@@ -11,17 +11,23 @@ jobs:
   bot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - run: pip install pytelegrambotapi
-      - name: Run
+      
+      - name: Install
+        run: pip install pytelegrambotapi
+      
+      - name: Run Bot
         env:
           TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           OWNER: ${{ secrets.OWNER_ID }}
         run: |
-          python3 -c "
+          python3 << 'EOF'
 import telebot
 import threading
 import time
@@ -38,7 +44,7 @@ OWNER_DATA = 'owners.json'
 
 def load_owners():
     try:
-        with open(OWNER_DATA) as f:
+        with open(OWNER_DATA, 'r') as f:
             return json.load(f).get('owners', [MASTER])
     except:
         return [MASTER]
@@ -49,7 +55,7 @@ def save_owners(owners):
 
 def load_file():
     try:
-        with open(FILE_DATA) as f:
+        with open(FILE_DATA, 'r') as f:
             return json.load(f).get('file_id')
     except:
         return None
@@ -81,7 +87,11 @@ def addowner(m):
         bot.reply_to(m, 'Only master can add owners')
         return
     try:
-        new = int(m.text.split()[1])
+        parts = m.text.split()
+        if len(parts) < 2:
+            bot.reply_to(m, 'Usage: /addowner ID')
+            return
+        new = int(parts[1])
         if new not in OWNERS:
             OWNERS.append(new)
             save_owners(OWNERS)
@@ -89,7 +99,7 @@ def addowner(m):
         else:
             bot.reply_to(m, 'Already owner')
     except:
-        bot.reply_to(m, 'Usage: /addowner ID')
+        bot.reply_to(m, 'Invalid ID')
 
 @bot.message_handler(commands=['removeowner'])
 def removeowner(m):
@@ -97,7 +107,11 @@ def removeowner(m):
         bot.reply_to(m, 'Only master can remove owners')
         return
     try:
-        rem = int(m.text.split()[1])
+        parts = m.text.split()
+        if len(parts) < 2:
+            bot.reply_to(m, 'Usage: /removeowner ID')
+            return
+        rem = int(parts[1])
         if rem == MASTER:
             bot.reply_to(m, 'Cannot remove master')
         elif rem in OWNERS:
@@ -107,7 +121,7 @@ def removeowner(m):
         else:
             bot.reply_to(m, 'Not an owner')
     except:
-        bot.reply_to(m, 'Usage: /removeowner ID')
+        bot.reply_to(m, 'Invalid ID')
 
 @bot.message_handler(commands=['owners'])
 def listowners(m):
@@ -116,7 +130,10 @@ def listowners(m):
         return
     txt = 'OWNERS:\n'
     for o in OWNERS:
-        txt += f'- {o} {\"(MASTER)\" if o == MASTER else \"\"}\n'
+        if o == MASTER:
+            txt += f'- {o} (MASTER)\n'
+        else:
+            txt += f'- {o}\n'
     bot.reply_to(m, txt)
 
 @bot.message_handler(commands=['upload'])
@@ -134,7 +151,8 @@ def handle_doc(m):
     global FILE_ID
     FILE_ID = m.document.file_id
     save_file(FILE_ID)
-    bot.reply_to(m, f'FILE SET!\\n{m.document.file_name}\\nLink: https://t.me/{bot.get_me().username}?start={SECRET}')
+    botname = bot.get_me().username
+    bot.reply_to(m, f'FILE SET!\nFile: {m.document.file_name}\nLink: https://t.me/{botname}?start={SECRET}')
 
 @bot.message_handler(commands=['showfile'])
 def showfile(m):
@@ -158,7 +176,8 @@ def removefile(m):
 def status(m):
     if not is_owner(m.from_user.id):
         return
-    bot.reply_to(m, f'File: {\"YES\" if FILE_ID else \"NO\"}\\nOwners: {len(OWNERS)}')
+    status_text = 'YES' if FILE_ID else 'NO'
+    bot.reply_to(m, f'File: {status_text}\nOwners: {len(OWNERS)}')
 
 @bot.message_handler(commands=['start'])
 def start(m):
@@ -167,7 +186,7 @@ def start(m):
         return
     parts = m.text.split()
     if len(parts) > 1 and parts[1] == SECRET:
-        bot.send_message(m.chat.id, '⚠️ File will be deleted in 1 hour! Download now.')
+        bot.send_message(m.chat.id, 'WARNING! File will be deleted in 1 hour! Download now.')
         f = bot.send_document(m.chat.id, FILE_ID)
         threading.Thread(target=delete_later, args=(m.chat.id, f.message_id, 3600)).start()
     elif len(parts) > 1:
@@ -181,4 +200,4 @@ def ping(m):
 
 print('Bot Started!')
 bot.infinity_polling()
-"
+EOF
