@@ -47,7 +47,7 @@ def delete_later(cid, mid, sec):
     except:
         pass
 
-# ========== EMOJI COMMANDS ==========
+# ========== OWNER COMMANDS ==========
 
 @bot.message_handler(commands=['myid'])
 def myid(m):
@@ -152,7 +152,7 @@ def handle_file(m):
         f'{file_type} `{file_name}`\n'
         f'🆔 ID: `{FILE_ID[:20]}...`\n\n'
         f'🔗 **Channel Link:**\n'
-        f`https://t.me/{botname}?start={SECRET}\n\n`
+        f'https://t.me/{botname}?start={SECRET}\n\n'
         f'⏰ Users will get file with **1 hour auto-delete**!\n'
         f'👑 You can change file anytime with `/upload`',
         parse_mode='Markdown'
@@ -259,14 +259,15 @@ def start(m):
 
 @bot.message_handler(commands=['ping'])
 def ping(m):
+    status_text = '✅ SET' if FILE_ID else '❌ NOT SET'
     bot.reply_to(
         m,
-        '🏓 **PONG!** 🏓\n\n'
-        '✅ Bot is **ALIVE** and **RUNNING**!\n'
-        '🔥 OGGY BHAI mode: **ACTIVE**\n'
-        '⏰ 24/7: **ON**\n'
-        '📁 File status: `{}`\n\n'
-        '😈 CHUMT KA DARINDA is here!'.format('✅ SET' if FILE_ID else '❌ NOT SET'),
+        f'🏓 **PONG!** 🏓\n\n'
+        f'✅ Bot is **ALIVE** and **RUNNING**!\n'
+        f'🔥 OGGY BHAI mode: **ACTIVE**\n'
+        f'⏰ 24/7: **ON**\n'
+        f'📁 File status: `{status_text}`\n\n'
+        f'😈 CHUMT KA DARINDA is here!',
         parse_mode='Markdown'
     )
 
